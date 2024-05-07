@@ -1,12 +1,18 @@
 import rclpy
 from rclpy.node import Node
-
+import board
+import neopixel
 
 # Node to publish transformations required for remote RViz visualization
 # Subscribes to Topics pulished by remote car and publishes transformations
 class aesthetic_control(Node):
     def __init__(self):
         super().__init__('aesthetic_control')
+
+        pixels = neopixel.NeoPixel(board.D18, 30)
+        pixels.fill((255, 0, 0))
+        pixels.show()
+        
 
 
 def main(args=None):
