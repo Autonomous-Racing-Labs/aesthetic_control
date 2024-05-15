@@ -1,0 +1,4 @@
+bool brake_lights
+bool flash false
+---
+bool status
