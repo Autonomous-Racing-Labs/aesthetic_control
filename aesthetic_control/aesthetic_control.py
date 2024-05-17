@@ -4,7 +4,7 @@ from rclpy.node import Node
 from lib import neopixel_spidev as np
 from lib.pixelbuf import wheel
 import time
-import aestheticCTRL
+from srv import *
 
 
 
@@ -65,7 +65,12 @@ class aesthetic_control(Node):
         super().__init__('aesthetic_control')
         
         # create service so multiple other clients can update car aesthetics
-        self.aesthetic_service = self.create_service(aestheticCTRL, 'aesthetic_control', self.aesthetic_callback)
+        self.srv_brake_light = self.create_service(brake_lights, '/carAest/brake_lights', self.srv_cb_brake_light)
+        self.srv_hazard_light = self.create_service(hazard_lights, '/carAest/hazard_lights', self.srv_cb_hazard_light)
+        self.srv_headlights = self.create_service(headlights, '/carAest/headlights', self.srv_cb_headlights)
+        self.srv_reverse_lights = self.create_service(reverse_lights, '/carAest/reverse_lights', self.srv_cb_reverse_lights)
+        self.srv_high_beam = self.create_service(high_beams, '/carAest/high_beam', self.srv_cb_high_beam)
+        self.srv_underglow = self.create_service(underglow, '/carAest/underglow', self.srv_cb_underglow)
         
         # Init 56 LEDs on SPI bus 0, cs 0 with colors ordered green, red, blue
         pixels =  np.NeoPixelSpiDev(0, 0, n=7, pixel_order=np.RGBW, brightness=0.5)
@@ -75,13 +80,37 @@ class aesthetic_control(Node):
             pixels.fill((0,0,0,0))
             time.sleep(0.5)
 
-    def aesthetic_callback(self, request, response):
-        
-        
+    def srv_cb_brake_light(self, request, response):
+    
+        response.success = True
+        return response
+    
+    def srv_cb_hazard_light(self, request, response):
+    
+        response.success = True
+        return response
+    
+    def srv_cb_headlights(self, request, response):
         
         response.success = True
         return response
+    
+    def srv_cb_reverse_lights(self, request, response):
+        
+        response.success = True
+        return response
+    
+    def srv_cb_high_beam(self, request, response):
+            
+        response.success = True
+        return response
 
+    def srv_cb_underglow(self, request, response):
+
+        response.success = True
+        return response
+    
+    
 def main(args=None):
     print('Hi from aesthetic_control.', flush=True)
     # launch aesthetic_control node
