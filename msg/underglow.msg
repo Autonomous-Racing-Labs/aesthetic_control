@@ -1,1 +1,0 @@
-bool int8[3]  set_underglow_color [0, 0, 0]
