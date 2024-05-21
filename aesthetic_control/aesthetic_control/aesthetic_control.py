@@ -9,7 +9,9 @@ from enum import Enum
 
 
 HEADLIGHTS_LED_COUNT = 7
-HEADLIGHTS_LED_PIN =18
+HEADLIGHTS_LED_PIN =19
+
+BACKLIGHTS_LED_PIN = 38
 
 BACKLIGHTS_LED_COUNT = 4
 CENTER_BRAKE_LIGHT_COUNT = 5
@@ -44,16 +46,16 @@ class Car():
         # brake lights are in the following order (back view of car)
         #  O  O  O  O ---- O O O O O ---- O  O  O  O
         # 12  11 10 9      8 7 6 5 4      3  2  1  0
-        self.brake_lights = self.other_lights[0:brake_cnt] + \
-                            self.other_lights[brake_cnt:brake_cnt+center_break_cnt] + \
-                            self.other_lights[brake_cnt+center_break_cnt:2*brake_cnt+center_break_cnt]
-        self.underglow = self.other_lights[2*brake_cnt+center_break_cnt:2*brake_cnt+center_break_cnt+underglow_cnt]
-        self.revese = self.other_lights[10:9]
-        self.hazard_lights =   self.other_lights[0:1]+ \
-                                self.other_lights[11:12] +\
-                                self.head_lights[2:4] +\
-                                self.head_lights[12:14]
-        self.daylights_back = self.other_lights[0:4] + self.other_lights[9:13]
+        self.brake_lights = [*range(0,brake_cnt),\
+                            *range(brake_cnt,brake_cnt+center_break_cnt),\
+                            *range(brake_cnt+center_break_cnt,2*brake_cnt+center_break_cnt)]
+        self.underglow_lights = range(2*brake_cnt+center_break_cnt,2*brake_cnt+center_break_cnt+underglow_cnt)
+        self.reverse_lights = range(10,9)
+        self.hazard_lights =   [*range(0,1), \
+                                *range(11,12),\
+                                *range(2,4),\
+                                *range(12,14)]
+        self.daylights_back = [*range(0,4), *range(9,13)]
         
         self.hazard_timer = None
         self.brake_flash_timer = None
@@ -67,6 +69,10 @@ class Car():
         self.hazard = LS.OFF
         self.underglow_color = (0,0,0)
         pass
+    
+    def _set_color(self, led_segment,id_list, color):
+        for id in id_list:
+            led_segment[id] = color
     
     def hazard_lights_on(self):
         self.hazard_timer = self.parent.create_timer(0.75, self._hazard_timer_cb)
@@ -105,10 +111,9 @@ class Car():
         pass
     
     def brake_lights_off(self):
-        if self.brake_flash_timer != None:
+        if self.brake_flash_timer is not None:
             self.brake_flash_timer.cancel()
-        else:
-            print("ERROR: brake lights are not on", flush=True)
+
         self.brakelight = LS.OFF
         self._update_lights()
         pass
@@ -124,10 +129,19 @@ class Car():
         pass
     
     def high_beam_flash(self):
-        self.highbeam = LS.ON
-        self.parent.create_timer(0.5, self._highbeam_timer_cb)
-        self._update_lights()
-        pass
+        
+        
+        # if timer is alerady running > highbeams are already on -> only reset time
+        if self.highbeam_timer is not None and not self.highbeam_timer.is_canceled():
+            self.highbeam_timer.reset()
+            self.parent.get_logger().info("Highbeams alerady running, restarting timer")
+            
+        else:
+            self.highbeam = LS.ON
+            self.highbeam_timer =  self.parent.create_timer(0.7, self._highbeam_timer_cb)
+            self.parent.get_logger().info("Highbeams timer started")
+            
+            self._update_lights()
     
     # color as (R,G,B)
     def set_underglow_color(self, color):
@@ -154,28 +168,35 @@ class Car():
         pass
     
     def _update_lights(self):
+        
+        # make sure that base is black for all lights
+        self.head_lights.fill((0,0,0))
+        self.other_lights.fill((0,0,0))
+        
         # turn headlights and outer brake lights on for day time running lights
         if self.daylights == LS.ON:
             self.head_lights.fill(CC.daylight_head)
-            self.daylights_back.fill(CC.daylight_back)
+            self._set_color(self.other_lights, self.daylights_back, CC.daylight_back)
         
         # overlay with braking lights
         if self.brakelight == LS.ON:
-            self.brake_lights.fill(CC.brake)
-        
+            self._set_color(self.other_lights, self.brake_lights, CC.brake)
+            
+
         # overlay with reverse lights
         if self.revese == LS.ON:
-            self.revese.fill(CC.reverse)
+            self._set_color(self.other_lights, self.reverse_lights, CC.reverse)
         
         # overlay with hazard lights
         if self.hazard == LS.ON:
-            self.hazard_lights.fill(CC.blinker)
+            self._set_color(self.other_lights, self.hazard_lights, CC.blinker)
         
         # overlay with high beam
         if self.highbeam == LS.ON:
             self.head_lights.fill(CC.high_beam)
+            
         
-        self.underglow.fill(self.underglow_color)
+        self._set_color(self.other_lights, self.underglow_lights, self.underglow_color)
         
         # write the set values to both led chains
         self.other_lights.write()
@@ -209,42 +230,36 @@ class aesthetic_control(Node):
         elif not request.brake_lights:
             self.car.brake_lights_off()
                 
-        response.success = True
         return response
     
     def srv_cb_hazard_light(self, request, response):
         
         self.car.hazard_lights_on() if request.hazard_lights else self.car.hazard_lights_off()
         
-        response.success = True
         return response
     
     def srv_cb_headlights(self, request, response):
         
         self.car.headlights_on() if request.headlights else self.car.headlights_off()
         
-        response.success = True
         return response
     
     def srv_cb_reverse_lights(self, request, response):
         
         self.car.reverse_lights_on() if request.reverse_lights else self.car.reverse_lights_off()
         
-        response.success = True
         return response
     
     def srv_cb_high_beam(self, request, response):
         
-        self.car.high_beam_flash() if request.high_beam else self.car.high_beam_off()
+        self.car.high_beam_flash() if request.high_beams else self.car.high_beam_off()
             
-        response.success = True
         return response
 
     def srv_cb_underglow(self, request, response):
         
         self.car.set_underglow_color(request.set_underglow_color)
 
-        response.success = True
         return response
     
     
