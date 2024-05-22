@@ -21,7 +21,7 @@ UNDERGLOW_LED_COUNT = 16
 class CC():
     
     daylight_head = (50,50,50,150) # (R,G,B,W)
-    daylight_back = (150,0,0) # (R,G,B)
+    daylight_back = (100,0,0) # (R,G,B)
     brake = (255,0,0) # (R,G,B)
     blinker = (255,255,0) # (R,G,B)
     reverse = (255,255,255) # (R,G,B)
@@ -50,12 +50,10 @@ class Car():
                             *range(brake_cnt,brake_cnt+center_break_cnt),\
                             *range(brake_cnt+center_break_cnt,2*brake_cnt+center_break_cnt)]
         self.underglow_lights = range(2*brake_cnt+center_break_cnt,2*brake_cnt+center_break_cnt+underglow_cnt)
-        self.reverse_lights = range(10,9)
-        self.hazard_lights =   [*range(0,1), \
-                                *range(11,12),\
-                                *range(2,4),\
-                                *range(12,14)]
-        self.daylights_back = [*range(0,4), *range(9,13)]
+        self.reverse_lights = [23,24]
+        self.hazard_lights =   [*range(0,int(brake_cnt/2)), \
+                                *range(brake_cnt+center_break_cnt+ int(brake_cnt/2) ,brake_cnt+center_break_cnt+ brake_cnt )]
+        self.daylights_back = [*range(0,brake_cnt), *range(brake_cnt+center_break_cnt,brake_cnt+center_break_cnt+brake_cnt)]
         
         self.hazard_timer = None
         self.brake_flash_timer = None
@@ -65,9 +63,11 @@ class Car():
         self.brakelight = LS.OFF
         self.highbeam = LS.OFF
         self.underglow = LS.OFF
-        self.revese = LS.OFF
+        self.reverse = LS.OFF
         self.hazard = LS.OFF
         self.underglow_color = (0,0,0)
+        
+        self._update_lights()
         pass
     
     def _set_color(self, led_segment,id_list, color):
@@ -75,33 +75,53 @@ class Car():
             led_segment[id] = color
     
     def hazard_lights_on(self):
-        self.hazard_timer = self.parent.create_timer(0.75, self._hazard_timer_cb)
+        if self.hazard_timer is not None and not self.hazard_timer.is_canceled():
+            # time running -> do nothing
+            return
+        elif self.hazard_timer is not None and self.hazard_timer.is_canceled():
+            # timer already exists, but was stopped prev
+            # restart timer, enable lights
+            self.hazard_timer.reset()
+        else:
+            self.parent.get_logger().info('Created Hazard Timer')
+            
+            self.hazard_timer = self.parent.create_timer(0.75, self._hazard_timer_cb)
+        
+        self.parent.get_logger().info('Enabling Hazard lights')
+
         self.hazard = LS.ON
         self._update_lights()
         pass
     
     def hazard_lights_off(self):
         if self.hazard_timer == None:
-            print("ERROR: hazard lights are not on", flush=True)
+            self.parent.get_logger().error('Tried to turn off Hazard lights, but not running')
         else:
+            self.parent.get_logger().info('Disabled  Hazard lights')
             self.hazard_timer.cancel()
             self.hazard=LS.OFF
             self._update_lights()
-        pass
     
     def headlights_on(self):
-        self.daylights = LS.ON
-        self._update_lights()
+        if self.daylights == LS.OFF:
+            self.parent.get_logger().info('Enabling Daytime running lights')
+            self.daylights = LS.ON
+            self._update_lights()
         pass
     
     def headlights_off(self):
-        self.daylights = LS.OFF
-        self._update_lights()
+        
+        if self.daylights == LS.ON:
+            self.parent.get_logger().info('Disabeling Daytime running lights')
+            self.daylights = LS.OFF
+            self._update_lights()
         pass
     
     def brake_lights_on(self):
-        self.brakelight = LS.ON
-        self._update_lights()
+        if self.brakelight == LS.OFF:
+            self.parent.get_logger().info('Enabling Brakelights')
+            self.brakelight = LS.ON
+            self._update_lights()
         pass
     
     def brake_light_blink(self):
@@ -111,21 +131,30 @@ class Car():
         pass
     
     def brake_lights_off(self):
-        if self.brake_flash_timer is not None:
+        if self.brake_flash_timer is not None and not self.brake_flash_timer.is_canceled():
             self.brake_flash_timer.cancel()
+            self.parent.get_logger().info('Disabling Brake Flashing')
+            
 
-        self.brakelight = LS.OFF
-        self._update_lights()
+        if self.brakelight == LS.ON:
+            self.parent.get_logger().info('Disabling Brakelight')
+            self.brakelight = LS.OFF
+            self._update_lights()
         pass
     
     def reverse_lights_on(self):
-        self.reverse = LS.ON
-        self._update_lights()
+        
+        if self.reverse == LS.OFF:
+            self.parent.get_logger().info('Enabling ReverseLights')
+            self.reverse = LS.ON
+            self._update_lights()
         pass
     
     def reverse_lights_off(self):
-        self.reverse = LS.OFF
-        self._update_lights()
+        if self.reverse == LS.ON:
+            self.parent.get_logger().info('Disabling ReverseLights')
+            self.reverse = LS.OFF
+            self._update_lights()
         pass
     
     def high_beam_flash(self):
@@ -138,7 +167,7 @@ class Car():
             
         else:
             self.highbeam = LS.ON
-            self.highbeam_timer =  self.parent.create_timer(0.7, self._highbeam_timer_cb)
+            self.highbeam_timer =  self.parent.create_timer(0.4, self._highbeam_timer_cb)
             self.parent.get_logger().info("Highbeams timer started")
             
             self._update_lights()
@@ -150,7 +179,8 @@ class Car():
         pass    
     
     def _hazard_timer_cb(self):
-        self.hazard = not self.hazard
+        
+        self.hazard = LS.OFF if self.hazard == LS.ON else LS.ON
         self._update_lights()
         pass
     
@@ -163,7 +193,9 @@ class Car():
         pass
     
     def _brake_flash_timer_cb(self):
-        self.brakelight = not self.brakelight
+        
+        self.brakelight = LS.OFF if self.brakelight == LS.ON else LS.ON
+        
         self._update_lights()
         pass
     
@@ -184,11 +216,12 @@ class Car():
             
 
         # overlay with reverse lights
-        if self.revese == LS.ON:
+        if self.reverse == LS.ON:
             self._set_color(self.other_lights, self.reverse_lights, CC.reverse)
         
         # overlay with hazard lights
         if self.hazard == LS.ON:
+            self.head_lights.fill((200,200,0,20))
             self._set_color(self.other_lights, self.hazard_lights, CC.blinker)
         
         # overlay with high beam
@@ -216,13 +249,14 @@ class aesthetic_control(Node):
         self.srv_high_beam = self.create_service(ae_srv.HighBeams, '/carAest/high_beam', self.srv_cb_high_beam)
         self.srv_underglow = self.create_service(ae_srv.Underglow, '/carAest/underglow', self.srv_cb_underglow)
         
-        self.car = Car(self, HEADLIGHTS_LED_COUNT, BACKLIGHTS_LED_COUNT, CENTER_BRAKE_LIGHT_COUNT, UNDERGLOW_LED_COUNT)
+        self.car = Car(self, HEADLIGHTS_LED_COUNT, 12, 11, UNDERGLOW_LED_COUNT)
         
             
 
     def srv_cb_brake_light(self, request, response):
+        
         if request.brake_lights:
-            if request.blink:
+            if request.flash:
                 self.car.brake_light_blink()
             else:
                 self.car.brake_lights_on()
@@ -245,8 +279,11 @@ class aesthetic_control(Node):
         return response
     
     def srv_cb_reverse_lights(self, request, response):
-        
-        self.car.reverse_lights_on() if request.reverse_lights else self.car.reverse_lights_off()
+    
+        if  request.reverse_lights:
+            self.car.reverse_lights_on()
+        else:
+            self.car.reverse_lights_off()
         
         return response
     
