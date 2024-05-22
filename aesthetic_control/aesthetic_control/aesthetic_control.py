@@ -125,7 +125,14 @@ class Car():
         pass
     
     def brake_light_blink(self):
-        self.brake_flash_timer = self.parent.create_timer(0.2, self._brake_flash_timer_cb)
+        if self.brake_flash_timer is not None and not self.brake_flash_timer.is_canceled():
+            # timer is already running -> do nothing
+            return
+        if self.brake_flash_timer is None:
+            self.brake_flash_timer = self.parent.create_timer(0.2, self._brake_flash_timer_cb)
+        if self.brake_flash_timer.is_canceled():
+            #timer exists, restart
+            self.brake_flash_timer.reset()
         self.brakelight = LS.ON
         self._update_lights()
         pass
