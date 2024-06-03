@@ -302,7 +302,7 @@ class aesthetic_control(Node):
 
     def srv_cb_underglow(self, request, response):
         
-        self.car.set_underglow_color(request.set_underglow_color)
+        self.car.set_underglow_color(request.glow.set_underglow_color)
 
         return response
     
