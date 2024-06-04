@@ -1,1 +1,1 @@
-int8[3] set_underglow_color [0, 0, 0]
+int8[3] set_underglow_color

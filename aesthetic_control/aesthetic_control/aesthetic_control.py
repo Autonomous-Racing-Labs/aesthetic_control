@@ -15,7 +15,7 @@ BACKLIGHTS_LED_PIN = 38
 
 BACKLIGHTS_LED_COUNT = 4
 CENTER_BRAKE_LIGHT_COUNT = 5
-UNDERGLOW_LED_COUNT = 16
+UNDERGLOW_LED_COUNT = 44
 
 # static colors for the car
 class CC():
@@ -65,7 +65,7 @@ class Car():
         self.underglow = LS.OFF
         self.reverse = LS.OFF
         self.hazard = LS.OFF
-        self.underglow_color = (0,0,0)
+        self.underglow_color = (100,0,0)
         
         self._update_lights()
         pass
@@ -181,6 +181,8 @@ class Car():
     
     # color as (R,G,B)
     def set_underglow_color(self, color):
+        self.parent.get_logger().info("Set Underground Color: {},{},{}".format(color[0],color[1],color[2]))
+        
         self.underglow_color = color
         self._update_lights()
         pass    
