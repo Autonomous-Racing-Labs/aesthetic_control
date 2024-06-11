@@ -14,7 +14,7 @@ HEADLIGHTS_LED_PIN =19
 BACKLIGHTS_LED_PIN = 38
 
 BACKLIGHTS_LED_COUNT = 4
-CENTER_BRAKE_LIGHT_COUNT = 5
+CENTER_BRAKE_LIGHT_COUNT = 11
 UNDERGLOW_LED_COUNT = 44
 
 # static colors for the car
@@ -23,7 +23,8 @@ class CC():
     daylight_head = (50,50,50,150) # (R,G,B,W)
     daylight_back = (100,0,0) # (R,G,B)
     brake = (255,0,0) # (R,G,B)
-    blinker = (255,255,0) # (R,G,B)
+    blinker = (255,110,0) # (R,G,B)
+    blinker_front = (110,255,0,0) #(G,R,B,W)
     reverse = (255,255,255) # (R,G,B)
     high_beam = (200,200,255,255)
     
@@ -230,7 +231,8 @@ class Car():
         
         # overlay with hazard lights
         if self.hazard == LS.ON:
-            self.head_lights.fill((200,200,0,20))
+            
+            self.head_lights.fill(CC.blinker_front)
             self._set_color(self.other_lights, self.hazard_lights, CC.blinker)
         
         # overlay with high beam
@@ -258,7 +260,7 @@ class aesthetic_control(Node):
         self.srv_high_beam = self.create_service(ae_srv.HighBeams, '/carAest/high_beam', self.srv_cb_high_beam)
         self.srv_underglow = self.create_service(ae_srv.Underglow, '/carAest/underglow', self.srv_cb_underglow)
         
-        self.car = Car(self, HEADLIGHTS_LED_COUNT, 12, 11, UNDERGLOW_LED_COUNT)
+        self.car = Car(self, HEADLIGHTS_LED_COUNT, 13, CENTER_BRAKE_LIGHT_COUNT, UNDERGLOW_LED_COUNT)
         
             
 
