@@ -15,6 +15,8 @@ BACKLIGHTS_LED_PIN = 38
 
 BACKLIGHTS_LED_COUNT = 4
 CENTER_BRAKE_LIGHT_COUNT = 11
+R_BRAKE_LIGHT_COUNT = 13
+L_BRAKE_LIGHT_CNT = 11
 UNDERGLOW_LED_COUNT = 44
 
 # static colors for the car
@@ -35,26 +37,26 @@ class LS(Enum):
 
 class Car():
     
-    def __init__(self, parent_node:Node, head_cnt, brake_cnt, center_break_cnt, underglow_cnt) -> None:
-        
+    def __init__(self, parent_node:Node, head_cnt, brake_cnt_R, brake_cnt_L, center_break_cnt, underglow_cnt) -> None:
+        hazard_cnt = 6
         self.parent = parent_node
         self.head_lights =  np.NeoPixelSpiDev(0, 0, n=head_cnt*2, pixel_order=np.RGBW, brightness=1, auto_write=False)
         
-        num_peripheral_lights = brake_cnt * 2 + center_break_cnt + underglow_cnt
+        num_peripheral_lights = brake_cnt_R +  brake_cnt_L + center_break_cnt + underglow_cnt
         self.other_lights =  np.NeoPixelSpiDev(1, 0, n=num_peripheral_lights, pixel_order=np.GRB, brightness=1, auto_write=False)
         
 
         # brake lights are in the following order (back view of car)
         #  O  O  O  O ---- O O O O O ---- O  O  O  O
         # 12  11 10 9      8 7 6 5 4      3  2  1  0
-        self.brake_lights = [*range(0,brake_cnt),\
-                            *range(brake_cnt,brake_cnt+center_break_cnt),\
-                            *range(brake_cnt+center_break_cnt,2*brake_cnt+center_break_cnt)]
-        self.underglow_lights = range(2*brake_cnt+center_break_cnt,2*brake_cnt+center_break_cnt+underglow_cnt)
+        self.brake_lights = [*range(0,brake_cnt_R),\
+                            *range(brake_cnt_R,brake_cnt_R+center_break_cnt),\
+                            *range(brake_cnt_R+center_break_cnt,brake_cnt_R+brake_cnt_L+center_break_cnt)]
+        self.underglow_lights = range(brake_cnt_R+brake_cnt_L+center_break_cnt,brake_cnt_R+brake_cnt_L+center_break_cnt+underglow_cnt)
         self.reverse_lights = [23,24]
-        self.hazard_lights =   [*range(0,int(brake_cnt/2)), \
-                                *range(brake_cnt+center_break_cnt+ int(brake_cnt/2) ,brake_cnt+center_break_cnt+ brake_cnt )]
-        self.daylights_back = [*range(0,brake_cnt), *range(brake_cnt+center_break_cnt,brake_cnt+center_break_cnt+brake_cnt)]
+        self.hazard_lights =   [*range(0,int(hazard_cnt)), \
+                                *range(brake_cnt_R+center_break_cnt+ hazard_cnt ,brake_cnt_R+center_break_cnt+ brake_cnt_L )]
+        self.daylights_back = [*range(0,brake_cnt_R), *range(brake_cnt_R+center_break_cnt,brake_cnt_R+center_break_cnt+brake_cnt_L)]
         
         self.hazard_timer = None
         self.brake_flash_timer = None
@@ -260,7 +262,7 @@ class aesthetic_control(Node):
         self.srv_high_beam = self.create_service(ae_srv.HighBeams, '/carAest/high_beam', self.srv_cb_high_beam)
         self.srv_underglow = self.create_service(ae_srv.Underglow, '/carAest/underglow', self.srv_cb_underglow)
         
-        self.car = Car(self, HEADLIGHTS_LED_COUNT, 13, CENTER_BRAKE_LIGHT_COUNT, UNDERGLOW_LED_COUNT)
+        self.car = Car(self, HEADLIGHTS_LED_COUNT, R_BRAKE_LIGHT_COUNT, L_BRAKE_LIGHT_CNT, CENTER_BRAKE_LIGHT_COUNT, UNDERGLOW_LED_COUNT)
         
             
 
