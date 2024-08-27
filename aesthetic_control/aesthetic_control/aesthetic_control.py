@@ -184,7 +184,7 @@ class Car():
     
     # color as (R,G,B)
     def set_underglow_color(self, color):
-        self.parent.get_logger().info("Set Underground Color: {},{},{}".format(color[0],color[1],color[2]))
+        #self.parent.get_logger().info("Set Underground Color: {},{},{}".format(color[0],color[1],color[2]))
         
         self.underglow_color = color
         self._update_lights()
